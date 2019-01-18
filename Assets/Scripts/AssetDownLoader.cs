@@ -5,157 +5,154 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
 
-public class AssetDownLoader
+namespace Network
 {
-    private class AssetBundleData
+    public class AssetDownLoader
     {
-        public string url = string.Empty;
-        public AssetBundle assetBundle = null;
-
-        public AssetBundleData(string url, AssetBundle bundle)
+        private class AssetBundleData
         {
-            this.url = url;
-            this.assetBundle = bundle;
-        }
-    }
+            public string url = string.Empty;
+            public AssetBundle assetBundle = null;
 
-    private Dictionary<string, AssetBundleData> _assetBundleDataDic = null;
-    private float _progress = 0;
-
-    public float Progress
-    {
-        get
-        {
-            return _progress;
-        }
-    }
-
-    public AssetDownLoader()
-    {
-        _assetBundleDataDic = new Dictionary<string, AssetBundleData>();
-    }
-
-    public AssetBundle GetAssetBundle(string key)
-    {
-        AssetBundleData assetBundleData;
-
-        if (_assetBundleDataDic.TryGetValue(key, out assetBundleData))
-        {
-            return assetBundleData.assetBundle;
-        }
-        else
-        {
-            return null;
-        }
-    }
-
-    public IEnumerator DownloadAndCache(string url, UnityAction<string> action = null)
-    {
-        string key = url;
-
-        if (_assetBundleDataDic.ContainsKey(key))
-        {
-            if (action != null)
+            public AssetBundleData(string url, AssetBundle bundle)
             {
-                action(null);
+                this.url = url;
+                this.assetBundle = bundle;
             }
-            yield return null;
         }
-        else
+
+        private Dictionary<string, AssetBundleData> _assetBundleDataDic = null;
+        private float _progress = 0;
+
+        public float Progress { get { return _progress; } }
+
+        public AssetDownLoader()
         {
-            using (UnityWebRequest wwwManifest = UnityWebRequest.Get(url + ".manifest"))
+            _assetBundleDataDic = new Dictionary<string, AssetBundleData>();
+        }
+
+        public AssetBundle GetAssetBundle(string key)
+        {
+            AssetBundleData assetBundleData;
+
+            if (_assetBundleDataDic.TryGetValue(key, out assetBundleData))
             {
-                yield return wwwManifest.SendWebRequest();
+                return assetBundleData.assetBundle;
+            }
+            else
+            {
+                return null;
+            }
+        }
 
-                if (wwwManifest.isNetworkError || wwwManifest.isHttpError)
+        public IEnumerator DownloadAndCache(string url, UnityAction<string> action)
+        {
+            string key = url;
+
+            if (_assetBundleDataDic.ContainsKey(key))
+            {
+                if (action != null)
                 {
-                    Debug.Log(wwwManifest.error);
+                    action(null);
                 }
-                else
+                yield return null;
+            }
+            else
+            {
+                using (UnityWebRequest wwwManifest = UnityWebRequest.Get(url + ".manifest"))
                 {
-                    Hash128 hashString = (default(Hash128));
-                    var hashRow = wwwManifest.downloadHandler.text.ToString().Split("\n".ToCharArray())[5];
-                    hashString = Hash128.Parse(hashRow.Split(':')[1].Trim());
+                    yield return wwwManifest.SendWebRequest();
 
-                    if (wwwManifest.downloadHandler.text.Contains("ManifestFileVersion"))
+                    if (wwwManifest.isNetworkError || wwwManifest.isHttpError)
                     {
-                        if (hashString.isValid)
-                        {
-                            if (Caching.IsVersionCached(url, hashString))
-                            {
-                                Debug.Log("already cached!");
-                            }
-                            else
-                            {
-                                Debug.Log("No cached");
-                            }
-                        }
-                        else
-                        {
-                            Debug.LogError("Invalid hash:" + hashString);
-                            yield break;
-                        }
+                        Debug.Log(wwwManifest.error);
                     }
                     else
                     {
-                        yield break;
-                    }
+                        Hash128 hashString = (default(Hash128));
+                        var hashRow = wwwManifest.downloadHandler.text.ToString().Split("\n".ToCharArray())[5];
+                        hashString = Hash128.Parse(hashRow.Split(':')[1].Trim());
 
-                    while (!Caching.ready)
-                    {
-                        yield return null;
-                    }
-
-                    using (UnityWebRequest www = UnityWebRequestAssetBundle.GetAssetBundle(url, hashString))
-                    {
-                        yield return www.SendWebRequest();
-
-                        if (www.isNetworkError || www.isHttpError)
+                        if (wwwManifest.downloadHandler.text.Contains("ManifestFileVersion"))
                         {
-                            Debug.Log(www.error);
+                            if (hashString.isValid)
+                            {
+                                if (Caching.IsVersionCached(url, hashString))
+                                {
+                                    Debug.Log("already cached!");
+                                }
+                                else
+                                {
+                                    Debug.Log("No cached");
+                                }
+                            }
+                            else
+                            {
+                                Debug.LogError("Invalid hash:" + hashString);
+                                yield break;
+                            }
                         }
                         else
                         {
-                            while (!www.isDone)
+                            yield break;
+                        }
+
+                        while (!Caching.ready)
+                        {
+                            yield return null;
+                        }
+
+                        using (UnityWebRequest www = UnityWebRequestAssetBundle.GetAssetBundle(url, hashString))
+                        {
+                            yield return www.SendWebRequest();
+
+                            if (www.isNetworkError || www.isHttpError)
                             {
-                                _progress = www.downloadProgress;
-                                yield return null;
+                                Debug.Log(www.error);
                             }
-
-                            _progress = 1f;
-                            _assetBundleDataDic.Add(key, new AssetBundleData(url, DownloadHandlerAssetBundle.GetContent(www)));
-
-                            if (action != null)
+                            else
                             {
-                                action(url);
+                                while (!www.isDone)
+                                {
+                                    _progress = www.downloadProgress;
+                                    yield return null;
+                                }
+
+                                _progress = 1f;
+                                _assetBundleDataDic.Add(key, new AssetBundleData(url, DownloadHandlerAssetBundle.GetContent(www)));
+
+                                if (action != null)
+                                {
+                                    action(url);
+                                }
                             }
                         }
                     }
                 }
             }
         }
-    }
 
-    public void Unload(string url, bool unloadAllLoadedObjects)
-    {
-        AssetBundleData assetBundleData;
-
-        if (_assetBundleDataDic.TryGetValue(url, out assetBundleData))
+        public void Unload(string url, bool unloadAllLoadedObjects)
         {
-            assetBundleData.assetBundle.Unload(unloadAllLoadedObjects);
-            assetBundleData.assetBundle = null;
-            _assetBundleDataDic.Remove(url);
-        }
-    }
+            AssetBundleData assetBundleData;
 
-    public void AllUnload(bool unloadAllLoadedObjects)
-    {
-        foreach (KeyValuePair<string, AssetBundleData> kVP in _assetBundleDataDic)
-        {
-            kVP.Value.assetBundle.Unload(unloadAllLoadedObjects);
-            kVP.Value.assetBundle = null;
+            if (_assetBundleDataDic.TryGetValue(url, out assetBundleData))
+            {
+                assetBundleData.assetBundle.Unload(unloadAllLoadedObjects);
+                assetBundleData.assetBundle = null;
+                _assetBundleDataDic.Remove(url);
+            }
         }
 
-        _assetBundleDataDic = new Dictionary<string, AssetBundleData>();
+        public void AllUnload(bool unloadAllLoadedObjects)
+        {
+            foreach (KeyValuePair<string, AssetBundleData> kVP in _assetBundleDataDic)
+            {
+                kVP.Value.assetBundle.Unload(unloadAllLoadedObjects);
+                kVP.Value.assetBundle = null;
+            }
+
+            _assetBundleDataDic = new Dictionary<string, AssetBundleData>();
+        }
     }
 }
