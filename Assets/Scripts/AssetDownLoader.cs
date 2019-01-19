@@ -45,7 +45,7 @@ namespace Network
             }
         }
 
-        public IEnumerator DownloadAssetBundleManifest(string url, UnityAction<AssetBundle> action)
+        public IEnumerator DownloadAssetBundleManifest(string url, UnityAction<string> action)
         {
             string key = url;
 
@@ -53,7 +53,7 @@ namespace Network
             {
                 if (action != null)
                 {
-                    action(null);
+                    action(url);
                 }
                 yield return null;
             }
@@ -78,7 +78,7 @@ namespace Network
 
                         if (action != null)
                         {
-                            action(DownloadHandlerAssetBundle.GetContent(www));
+                            action(url);
                         }
                     }
                 }
@@ -93,7 +93,7 @@ namespace Network
             {
                 if (action != null)
                 {
-                    action(null);
+                    action(url);
                 }
                 yield return null;
             }

@@ -84,8 +84,9 @@ namespace Network
             this.NextDownload();
         }
 
-        private void OnDownloadedAssetBundleManifest(AssetBundle bundle)
+        private void OnDownloadedAssetBundleManifest(string url)
         {
+            AssetBundle bundle = _assetDownLoader.GetAssetBundle(url);
             var manifest = bundle.LoadAsset<AssetBundleManifest>("AssetBundleManifest");
             string[] names = manifest.GetAllAssetBundles();
             _downloadCount = names.Length;
