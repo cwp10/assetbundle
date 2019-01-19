@@ -148,6 +148,7 @@ namespace Network
         public T LoadAsset<T>(string name) where T : Object
         {
             string url = string.Empty;
+            name = name.ToLower();
 
             if (_assetObjectNameDic.TryGetValue(name, out url))
             {
