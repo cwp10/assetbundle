@@ -45,6 +45,46 @@ namespace Network
             }
         }
 
+        public IEnumerator DownloadAssetBundleManifest(string url, UnityAction<AssetBundle> action)
+        {
+            string key = url;
+
+            if (_assetBundleDataDic.ContainsKey(key))
+            {
+                if (action != null)
+                {
+                    action(null);
+                }
+                yield return null;
+            }
+            else 
+            {
+                using (UnityWebRequest www = UnityWebRequestAssetBundle.GetAssetBundle(url))
+                {
+                    yield return www.SendWebRequest();
+
+                    if (www.isNetworkError || www.isHttpError)
+                    {
+                        Debug.Log(www.error);
+                    }
+                    else
+                    {
+                        while (!www.isDone)
+                        {
+                            yield return null;
+                        }
+
+                        _assetBundleDataDic.Add(key, new AssetBundleData(url, DownloadHandlerAssetBundle.GetContent(www)));
+
+                        if (action != null)
+                        {
+                            action(DownloadHandlerAssetBundle.GetContent(www));
+                        }
+                    }
+                }
+            }
+        }
+
         public IEnumerator DownloadAndCache(string url, UnityAction<string> action)
         {
             string key = url;
@@ -132,13 +172,13 @@ namespace Network
             }
         }
 
-        public void Unload(string url, bool unloadAllLoadedObjects)
+        public void Unload(string url, bool unloadLoadedObjects)
         {
             AssetBundleData assetBundleData;
 
             if (_assetBundleDataDic.TryGetValue(url, out assetBundleData))
             {
-                assetBundleData.assetBundle.Unload(unloadAllLoadedObjects);
+                assetBundleData.assetBundle.Unload(unloadLoadedObjects);
                 assetBundleData.assetBundle = null;
                 _assetBundleDataDic.Remove(url);
             }
