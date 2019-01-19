@@ -106,7 +106,10 @@ namespace Network
 
             foreach (string name in names)
             {
-                _assetObjectNameDic.Add(name, url);
+                if (!_assetObjectNameDic.ContainsKey(name))
+                {
+                    _assetObjectNameDic.Add(name, url);
+                }
             }
 
             _downloadCount--;
