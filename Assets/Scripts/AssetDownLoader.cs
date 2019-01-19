@@ -113,27 +113,20 @@ namespace Network
                         var hashRow = wwwManifest.downloadHandler.text.ToString().Split("\n".ToCharArray())[5];
                         hashString = Hash128.Parse(hashRow.Split(':')[1].Trim());
 
-                        if (wwwManifest.downloadHandler.text.Contains("ManifestFileVersion"))
+                        if (hashString.isValid)
                         {
-                            if (hashString.isValid)
+                            if (Caching.IsVersionCached(url, hashString))
                             {
-                                if (Caching.IsVersionCached(url, hashString))
-                                {
-                                    Debug.Log("already cached!");
-                                }
-                                else
-                                {
-                                    Debug.Log("No cached");
-                                }
+                                Debug.Log("already cached!");
                             }
                             else
                             {
-                                Debug.LogError("Invalid hash:" + hashString);
-                                yield break;
+                                Debug.Log("No cached");
                             }
                         }
                         else
                         {
+                            Debug.LogError("Invalid hash:" + hashString);
                             yield break;
                         }
 
