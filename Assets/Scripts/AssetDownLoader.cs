@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
 
-namespace Network
+namespace AssetBundleSystem
 {
     public class AssetDownLoader
     {
@@ -21,21 +21,23 @@ namespace Network
             }
         }
 
-        private Dictionary<string, AssetBundleData> _assetBundleDataDic = null;
+        private Dictionary<string, AssetBundleData> _assetBundleDatas = null;
         private float _progress = 0;
+        private MonoBehaviour _behaviour = null;
 
         public float Progress { get { return _progress; } }
 
-        public AssetDownLoader()
+        public AssetDownLoader(MonoBehaviour behaviour)
         {
-            _assetBundleDataDic = new Dictionary<string, AssetBundleData>();
+            this._behaviour = behaviour;
+            this._assetBundleDatas = new Dictionary<string, AssetBundleData>();
         }
 
         public AssetBundle GetAssetBundle(string key)
         {
             AssetBundleData assetBundleData;
 
-            if (_assetBundleDataDic.TryGetValue(key, out assetBundleData))
+            if (_assetBundleDatas.TryGetValue(key, out assetBundleData))
             {
                 return assetBundleData.assetBundle;
             }
@@ -45,11 +47,9 @@ namespace Network
             }
         }
 
-        public IEnumerator DownloadAssetBundleManifest(string url, UnityAction<string> action)
+        public IEnumerator DownloadAssetBundle(string url, UnityAction<string> action)
         {
-            string key = url;
-
-            if (_assetBundleDataDic.ContainsKey(key))
+            if (_assetBundleDatas.ContainsKey(url))
             {
                 if (action != null)
                 {
@@ -62,34 +62,14 @@ namespace Network
                 using (UnityWebRequest www = UnityWebRequestAssetBundle.GetAssetBundle(url))
                 {
                     yield return www.SendWebRequest();
-
-                    if (www.isNetworkError || www.isHttpError)
-                    {
-                        Debug.Log(www.error);
-                    }
-                    else
-                    {
-                        while (!www.isDone)
-                        {
-                            yield return null;
-                        }
-
-                        _assetBundleDataDic.Add(key, new AssetBundleData(url, DownloadHandlerAssetBundle.GetContent(www)));
-
-                        if (action != null)
-                        {
-                            action(url);
-                        }
-                    }
+                    yield return _behaviour.StartCoroutine(AddAssetBundles(www, url, action));
                 }
             }
         }
 
-        public IEnumerator DownloadAndCache(string url, UnityAction<string> action)
+        public IEnumerator DownloadAndCacheAssetBundle(string url, UnityAction<string> action)
         {
-            string key = url;
-
-            if (_assetBundleDataDic.ContainsKey(key))
+            if (_assetBundleDatas.ContainsKey(url))
             {
                 if (action != null)
                 {
@@ -138,27 +118,7 @@ namespace Network
                         using (UnityWebRequest www = UnityWebRequestAssetBundle.GetAssetBundle(url, hashString))
                         {
                             yield return www.SendWebRequest();
-
-                            if (www.isNetworkError || www.isHttpError)
-                            {
-                                Debug.Log(www.error);
-                            }
-                            else
-                            {
-                                while (!www.isDone)
-                                {
-                                    _progress = www.downloadProgress;
-                                    yield return null;
-                                }
-
-                                _progress = 1f;
-                                _assetBundleDataDic.Add(key, new AssetBundleData(url, DownloadHandlerAssetBundle.GetContent(www)));
-
-                                if (action != null)
-                                {
-                                    action(url);
-                                }
-                            }
+                            yield return _behaviour.StartCoroutine(AddAssetBundles(www, url, action));
                         }
                     }
                 }
@@ -169,23 +129,45 @@ namespace Network
         {
             AssetBundleData assetBundleData;
 
-            if (_assetBundleDataDic.TryGetValue(url, out assetBundleData))
+            if (_assetBundleDatas.TryGetValue(url, out assetBundleData))
             {
                 assetBundleData.assetBundle.Unload(unloadLoadedObjects);
                 assetBundleData.assetBundle = null;
-                _assetBundleDataDic.Remove(url);
+                _assetBundleDatas.Remove(url);
             }
         }
 
         public void AllUnload(bool unloadAllLoadedObjects)
         {
-            foreach (KeyValuePair<string, AssetBundleData> kVP in _assetBundleDataDic)
+            foreach (KeyValuePair<string, AssetBundleData> kVP in _assetBundleDatas)
             {
                 kVP.Value.assetBundle.Unload(unloadAllLoadedObjects);
                 kVP.Value.assetBundle = null;
             }
 
-            _assetBundleDataDic = new Dictionary<string, AssetBundleData>();
+            _assetBundleDatas = new Dictionary<string, AssetBundleData>();
+        }
+
+        private IEnumerator AddAssetBundles(UnityWebRequest www, string url, UnityAction<string> action)
+        {
+            if (www.isNetworkError || www.isHttpError)
+            {
+                Debug.Log(www.error);
+            }
+            else
+            {
+                while (!www.isDone)
+                {
+                    yield return null;
+                }
+
+                _assetBundleDatas.Add(url, new AssetBundleData(url, DownloadHandlerAssetBundle.GetContent(www)));
+
+                if (action != null)
+                {
+                    action(url);
+                }
+            }
         }
     }
 }

@@ -4,25 +4,27 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.IO;
 
-public class Test : MonoBehaviour
+public class AssetBundleTest2 : MonoBehaviour
 {
     public string downloadUrl = string.Empty;
 
     void Start()
     {
-        AssetBundleManager.Instance.Init();
-        AssetBundleManager.Instance.DownloadAllAssetBundle(DataPath, OnDownloadAllAssetBundle);
+        AssetBundleManager.Instance.DownloadAllAssetBundle(DataPath, null);
+
+        GameObject prefab = AssetBundleManager.Instance.LoadAsset<GameObject>("Assets/Bundles/Prefabs/Lobby/Capsule.prefab");
+        GameObject obj = Instantiate(prefab);
+        obj.transform.localPosition = Vector3.zero;
+
+        GameObject prefab2 = AssetBundleManager.Instance.LoadAsset<GameObject>("Assets/Bundles/Prefabs/Lobby/Capsule.prefab");
+        GameObject obj2 = Instantiate(prefab2);
+        obj2.transform.localPosition = Vector3.zero;
     }
 
 
     void Update()
     {
-
-    }
-
-    private void OnDownloadAllAssetBundle(string url)
-    {
-        Debug.Log(url);
+    
     }
 
     private string DataPath

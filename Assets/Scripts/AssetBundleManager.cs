@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
-using Network;
+using AssetBundleSystem;
 
 public class AssetBundleManager : UnitySingleton<AssetBundleManager>
 {
@@ -33,12 +33,12 @@ public class AssetBundleManager : UnitySingleton<AssetBundleManager>
 
     public void Init()
     {
-        _assetBundleClient = new AssetBundleClient();
+        _assetBundleClient = new AssetBundleClient(this);
     }
 
     public void DownloadAllAssetBundle(string url, UnityAction<string> action)
     {
-        _assetBundleClient.DownloadedAssetBundleManifest(url, action);
+        _assetBundleClient.DownloadedAllAssetBundle(url, action);
     }
 
     public void DownloadAssetBundle(string url, UnityAction<string> action)

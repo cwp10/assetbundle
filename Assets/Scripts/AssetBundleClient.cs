@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
 
-namespace Network
+namespace AssetBundleSystem
 {
     public class AssetBundleClient
     {
@@ -27,7 +27,7 @@ namespace Network
             }
         }
 
-        private Dictionary<string, string> _assetObjectNameDic = null;
+        private Dictionary<string, string> _assetObjectNames = null;
         private Queue<RequestItem> _requestQueue = null;
         private State _state = State.Ready;
         private AssetDownLoader _assetDownLoader = null;
@@ -36,6 +36,7 @@ namespace Network
         private int _downloadCount = 0;
 
         private UnityAction<string> _downloadedCallback = null;
+        private MonoBehaviour _behaviour = null;
 
         public bool IsBusy { get { return _state != State.Ready; } }
         public float Progress
@@ -72,12 +73,12 @@ namespace Network
             {
                 return;
             }
-            CoroutineHandler.StartStaticCoroutine(ProcessRequest(_requestQueue.Peek()));
+            _behaviour.StartCoroutine(ProcessRequest(_requestQueue.Peek()));
         }
         private IEnumerator ProcessRequest(RequestItem item)
         {
             _state = State.Busy;
-            yield return CoroutineHandler.StartStaticCoroutine(_assetDownLoader.DownloadAndCache(item.url, item.action));
+            yield return _behaviour.StartCoroutine(_assetDownLoader.DownloadAndCacheAssetBundle(item.url, item.action));
 
             _requestQueue.Dequeue();
             _state = State.Ready;
@@ -106,9 +107,9 @@ namespace Network
 
             foreach (string name in names)
             {
-                if (!_assetObjectNameDic.ContainsKey(name))
+                if (!_assetObjectNames.ContainsKey(name))
                 {
-                    _assetObjectNameDic.Add(name, url);
+                    _assetObjectNames.Add(name, url);
                 }
             }
 
@@ -123,14 +124,15 @@ namespace Network
             }
         }
 
-        public AssetBundleClient()
+        public AssetBundleClient(MonoBehaviour behaviour)
         {
-            _assetDownLoader = new AssetDownLoader();
-            _assetObjectNameDic = new Dictionary<string, string>();
-            _requestQueue = new Queue<RequestItem>();
+            this._behaviour = behaviour;
+            this._assetDownLoader = new AssetDownLoader(_behaviour);
+            this._assetObjectNames = new Dictionary<string, string>();
+            this._requestQueue = new Queue<RequestItem>();
         }
 
-        public void DownloadedAssetBundleManifest(string url, UnityAction<string> action)
+        public void DownloadedAllAssetBundle(string url, UnityAction<string> action)
         {
             _rootPath = url;
             _downloadedCallback = action;
@@ -139,7 +141,7 @@ namespace Network
             string file = sp[sp.Length - 1];
             string path = Path.Combine(_rootPath, file);
 
-            CoroutineHandler.StartStaticCoroutine(_assetDownLoader.DownloadAssetBundleManifest(path, OnDownloadedAssetBundleManifest));
+            _behaviour.StartCoroutine(_assetDownLoader.DownloadAssetBundle(path, OnDownloadedAssetBundleManifest));
         }
 
         public void DownloadAssetBundle(string url, UnityAction<string> action)
@@ -153,7 +155,7 @@ namespace Network
             string url = string.Empty;
             name = name.ToLower();
 
-            if (_assetObjectNameDic.TryGetValue(name, out url))
+            if (_assetObjectNames.TryGetValue(name, out url))
             {
                 AssetBundle bundle = _assetDownLoader.GetAssetBundle(url);
                 return bundle.LoadAsset<T>(name);
