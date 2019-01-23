@@ -25,7 +25,13 @@ namespace AssetBundleSystem
         private float _progress = 0;
         private MonoBehaviour _behaviour = null;
 
-        public float Progress { get { return _progress; } }
+        public float Progress
+        {
+            get
+            {
+                return _progress;
+            }
+        }
 
         public AssetDownLoader(MonoBehaviour behaviour)
         {
@@ -57,7 +63,7 @@ namespace AssetBundleSystem
                 }
                 yield return null;
             }
-            else 
+            else
             {
                 using (UnityWebRequest www = UnityWebRequestAssetBundle.GetAssetBundle(url))
                 {
@@ -117,7 +123,7 @@ namespace AssetBundleSystem
 
                         using (UnityWebRequest www = UnityWebRequestAssetBundle.GetAssetBundle(url, hashString))
                         {
-                            yield return www.SendWebRequest();
+                            www.SendWebRequest();
                             yield return _behaviour.StartCoroutine(AddAssetBundles(www, url, action));
                         }
                     }
@@ -150,23 +156,27 @@ namespace AssetBundleSystem
 
         private IEnumerator AddAssetBundles(UnityWebRequest www, string url, UnityAction<string> action)
         {
-            if (www.isNetworkError || www.isHttpError)
+            _progress = 0.0f;
+
+            while (!www.isNetworkError && www.downloadProgress < 1.0f)
             {
-                Debug.Log(www.error);
+                _progress = www.downloadProgress;
+                yield return null;
             }
-            else
+
+            if (www.isNetworkError)
             {
-                while (!www.isDone)
-                {
-                    yield return null;
-                }
+                Debug.LogError(www.error);
+                yield break;
+            }
 
-                _assetBundleDatas.Add(url, new AssetBundleData(url, DownloadHandlerAssetBundle.GetContent(www)));
+            _progress = 1.0f;
 
-                if (action != null)
-                {
-                    action(url);
-                }
+            _assetBundleDatas.Add(url, new AssetBundleData(url, DownloadHandlerAssetBundle.GetContent(www)));
+
+            if (action != null)
+            {
+                action(url);
             }
         }
     }
