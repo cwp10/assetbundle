@@ -51,6 +51,11 @@ public class AssetBundleManager : UnitySingleton<AssetBundleManager>
         return _assetBundleClient.LoadAsset<T>(name);
     }
 
+    public T[] LoadAllAssets<T>(string url) where T : Object
+    {
+        return _assetBundleClient.LoadAllAssets<T>(url);
+    }
+
     public void Unload(string url, bool unloadLoadedObjects)
     {
         _assetBundleClient.Unload(url, unloadLoadedObjects);

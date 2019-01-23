@@ -92,7 +92,7 @@ namespace AssetBundleSystem
             string[] names = manifest.GetAllAssetBundles();
             _downloadCount = names.Length;
             _totalDownloadCount = _downloadCount;
-            
+
             foreach (string name in names)
             {
                 string path = Path.Combine(_rootPath, name);
@@ -158,7 +158,20 @@ namespace AssetBundleSystem
             if (_assetObjectNames.TryGetValue(name, out url))
             {
                 AssetBundle bundle = _assetDownLoader.GetAssetBundle(url);
-                return bundle.LoadAsset<T>(name);
+                if (bundle != null)
+                {
+                    return bundle.LoadAsset<T>(name);
+                }
+            }
+            return null;
+        }
+
+        public T[] LoadAllAssets<T>(string url) where T : Object
+        {
+            AssetBundle bundle = _assetDownLoader.GetAssetBundle(url);
+            if (bundle != null)
+            {
+                return bundle.LoadAllAssets<T>();
             }
             return null;
         }
